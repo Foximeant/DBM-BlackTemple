@@ -21,7 +21,7 @@
 ## X-DBM-Mod-Name-ruRU: Черный храм
 ## X-DBM-Mod-LoadZone-ruRU: Черный храм
 ## Version: 9.2.97
-## X-Sirus-Update: https://github.com/Foximeant/DBM-BlackTemple/tree/main
+## X-Sirus-Update: https://github.com/Foximeant/DBM-BlackTemple/tree/main/DBM-BlackTemple
 
 localization.en.lua
 localization.cn.lua
