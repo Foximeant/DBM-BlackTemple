@@ -1,11 +1,11 @@
 local mod	= DBM:NewMod("Illidan", "DBM-BlackTemple")
 local L		= mod:GetLocalizedStrings()
 
-mod:SetRevision("20220518110528")
+mod:SetRevision("20260729000000")
 mod:SetCreatureID(22917)
 
 mod:SetModelID(21135)
-mod:SetUsedIcons(8)
+mod:SetUsedIcons(4)
 
 mod:RegisterCombat("combat")
 
@@ -14,88 +14,124 @@ mod:RegisterEvents(
 )
 
 mod:RegisterEventsInCombat(
-	"SPELL_AURA_APPLIED 41917 41914 40585 40932 41083 40683 40695",
-	"SPELL_AURA_REMOVED 41917 41914",
-	"SPELL_CAST_START 40904 41117 39849",
-	"SPELL_CAST_SUCCESS 41126 40647",
-	"UNIT_DIED"
+	"SPELL_AURA_APPLIED 376244 376251 376285",
+	"SPELL_AURA_APPLIED_DOSE 376244 376248",
+	"SPELL_AURA_REMOVED 376244 376251 376285",
+	"SPELL_CAST_START 376243 376245 376249",
+	"SPELL_CAST_SUCCESS 376250",
+	"UNIT_DIED",
+	"UNIT_HEALTH"
 )
 
---Parasites in phase 1? if so range frame needs to be more phases
---TODO, flame crash timer 26?
---TODO, phase 4 log where I don't overkill boss too fast.
---TODO, add shear warning (defensive) to prevent application all together, taunt swap if it does get applied
---TODO, fire for elementals added to GTFO
-local warnParasite			= mod:NewTargetAnnounce(41917, 3)
-local warnDrawSoul			= mod:NewSpellAnnounce(40904, 3, nil, "Tank", 2)--Needed?
-local warnPhase2Soon		= mod:NewPrePhaseAnnounce(2, 3)
-local warnPhase2			= mod:NewPhaseAnnounce(2)
-local warnEyebeam			= mod:NewSpellAnnounce(40018, 3)
-local warnBarrage			= mod:NewTargetAnnounce(40585, 3)
-local warnPhase3			= mod:NewPhaseAnnounce(3)
-local warnDemon				= mod:NewAnnounce("WarnDemon", 3 , 40506)
-local warnHuman				= mod:NewAnnounce("WarnHuman", 3 , 97061)
-local warnFlame				= mod:NewTargetAnnounce(40932, 3)
-local warnFlameBurst		= mod:NewSpellAnnounce(41131, 3)
-local warnShadowDemon		= mod:NewTargetNoFilterAnnounce(41117, 3)
-local warnPhase4Soon		= mod:NewPrePhaseAnnounce(4, 3)
-local warnPhase4			= mod:NewPhaseAnnounce(4)
-local warnEnrage			= mod:NewSpellAnnounce(40683, 3)
-local warnCaged				= mod:NewSpellAnnounce(40695, 3)
+local CID_DARK_FLAME		= 70055
+local CID_CORRUPT_FLAME	= 22997
 
-local specWarnParasite		= mod:NewSpecialWarningYou(41917, nil, nil, nil, 1, 2)
-local yellParasiteFades		= mod:NewShortFadesYell(41917)
-local specWarnBarrage		= mod:NewSpecialWarningMoveAway(40585, nil, nil, nil, 1, 2)
-local specWarnShadowDemon	= mod:NewSpecialWarningSwitch(41117, "Dps", nil, nil, 3, 2)
-local specWarnGTFO			= mod:NewSpecialWarningGTFO(40841, nil, nil, nil, 1, 2)
+local warnParasite		= mod:NewTargetAnnounce(376251, 3)
 
-local timerParasite			= mod:NewTargetTimer(10, 41917, nil, false, nil, 1, nil, DBM_COMMON_L.DAMAGE_ICON)
-local timerBarrage			= mod:NewTargetTimer(10, 40585, nil, false, nil, 3)
-local timerNextBarrage		= mod:NewCDTimer(44, 40585, nil, nil, nil, 3)
---local timerFlame			= mod:NewTargetTimer(60, 40932)
-local timerNextFlameBurst	= mod:NewCDTimer(20, 41131, nil, nil, nil, 3)
-local timerShadowDemon		= mod:NewCDTimer(34, 41117, nil, nil, nil, 1, nil, DBM_COMMON_L.DAMAGE_ICON)
-local timerNextHuman		= mod:NewTimer(74, "TimerNextHuman", 97061, nil, nil, 6)
-local timerNextDemon		= mod:NewTimer(60, "TimerNextDemon", 40506, nil, nil, 6)
-local timerEnrage			= mod:NewBuffActiveTimer(10, 40683)
-local timerNextEnrage		= mod:NewCDTimer(40, 40683)
-local timerCaged			= mod:NewBuffActiveTimer(15, 40695, nil, nil, nil, 6)
-local timerPhase4			= mod:NewPhaseTimer(30)
+local warnPhase2Soon	= mod:NewPrePhaseAnnounce(2, 3)
+local warnPhase2		= mod:NewPhaseAnnounce(2)
+local warnPhase3		= mod:NewPhaseAnnounce(3)
+local warnDemon			= mod:NewSpellAnnounce(376285, 3)
+local warnHuman			= mod:NewAnnounce("WarnHuman", 3)
+local warnBombardment	= mod:NewAnnounce("WarnBombardment", 3)
 
-local timerCombatStart		= mod:NewCombatTimer(36)
-local berserkTimer			= mod:NewBerserkTimer(1500)
+local specWarnParasite		= mod:NewSpecialWarningYou(376251, nil, nil, nil, 1, 2)
+local yellParasiteFades		= mod:NewShortFadesYell(376251)
+local specWarnShear			= mod:NewSpecialWarningTaunt(376244, nil, nil, nil, 1, 2)
 
-mod:AddRangeFrameOption(6, 40932)--Spell is 5 yards, but give it 6 or good measure since 5 yard check is probably least precise one since nerfs.
-mod:AddSetIconOption("ParasiteIcon", 41917)
+local timerParasite		= mod:NewTargetTimer(10, 376251, nil, false, nil, 1, nil, DBM_COMMON_L.DAMAGE_ICON)
+local timerNextParasite	= mod:NewCDTimer(60, 376250, nil, nil, nil, 1)
+local timerNextCleave	= mod:NewCDTimer(8.5, 376243, nil, nil, nil, 2)
+local timerNextFlameCrash	= mod:NewCDTimer(13.5, 376245, "FlameCrashCount", nil, nil, 3)
+local timerNextDrawSoul	= mod:NewCDTimer(23, 376249, nil, nil, nil, 3)
+local timerDemonForm	= mod:NewBuffActiveTimer(75, 376285, nil, nil, nil, 4)
 
-mod.vb.flamesDown = 0
-mod.vb.flameBursts = 0
-mod.vb.warned_preP2 = false
-mod.vb.warned_preP4 = false
+local timerCombatStart	= mod:NewCombatTimer(38)
+local berserkTimer		= mod:NewBerserkTimer(720)
 
-local function humanForms(self)
-	warnHuman:Show()
-	timerNextFlameBurst:Cancel()
-	timerNextDemon:Start()
-	if self.vb.phase == 4 then
-		timerEnrage:Start()
+mod:AddSetIconOption("ParasiteIcon", 376251)
+mod:AddRangeFrameOption(30, 376251)
+
+mod.vb.excludedNames = mod.vb.excludedNames or {}
+
+SLASH_ILLIDANEXCLUDE1 = "/illidanex"
+SlashCmdList["ILLIDANEXCLUDE"] = function(msg)
+	local cmd, name = msg:match("^(%S*)%s*(.-)$")
+	cmd = (cmd or ""):lower()
+	if cmd == "add" and name ~= "" then
+		mod.vb.excludedNames[name] = true
+		DBM:AddMsg("Illidan: excluded "..name)
+	elseif cmd == "remove" and name ~= "" then
+		mod.vb.excludedNames[name] = nil
+		DBM:AddMsg("Illidan: removed "..name)
+	elseif cmd == "clear" then
+		wipe(mod.vb.excludedNames)
+		DBM:AddMsg("Illidan: excluded list cleared")
+	elseif cmd == "list" then
+		local names = {}
+		for n in pairs(mod.vb.excludedNames) do
+			names[#names + 1] = n
+		end
+		DBM:AddMsg("Illidan excluded: "..table.concat(names, ", "))
+	else
+		DBM:AddMsg("Usage: /illidanex add|remove|clear|list [name]")
 	end
 end
 
+local function getRaidUnits()
+	local units = {}
+	if IsInRaid() then
+		for i = 1, GetNumRaidMembers() do
+			units[#units + 1] = "raid"..i
+		end
+	else
+		units[#units + 1] = "player"
+		for i = 1, GetNumPartyMembers() do
+			units[#units + 1] = "party"..i
+		end
+	end
+	return units
+end
+
+local function getTopThreatTargets(n)
+	local list = {}
+	for _, unit in ipairs(getRaidUnits()) do
+		if UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
+			local name = UnitName(unit)
+			if name and not mod.vb.excludedNames[name] then
+				local isTanking, _, _, _, threatValue = UnitDetailedThreatSituation(unit, "boss1")
+				if threatValue and not isTanking then
+					list[#list + 1] = { name = name, threat = threatValue }
+				end
+			end
+		end
+	end
+	table.sort(list, function(a, b) return a.threat > b.threat end)
+	local names = {}
+	for i = 1, math.min(n, #list) do
+		names[#names + 1] = list[i].name
+	end
+	return names
+end
+
+mod.vb.shearStacks = 0
+mod.vb.demonicFury = 0
+mod.vb.flameCrashCount = 0
+mod.vb.warned_preP2 = false
+mod.vb.addsKilled = {}
+mod.vb.inDemonForm = false
+
 function mod:OnCombatStart(delay)
 	self:SetStage(1)
-	self.vb.flamesDown = 0
-	self.vb.flameBursts = 0
+	self.vb.shearStacks = 0
+	self.vb.demonicFury = 0
+	self.vb.flameCrashCount = 0
 	self.vb.warned_preP2 = false
-	self.vb.warned_preP4 = false
+	self.vb.addsKilled = {}
+	self.vb.inDemonForm = false
 	berserkTimer:Start(-delay)
-	if not self:IsTrivial() then
-		self:RegisterShortTermEvents(
-			"SPELL_DAMAGE 40841",
-			"SPELL_MISSED 40841",
-			"UNIT_HEALTH"
-		)
-	end
+	timerNextDrawSoul:Start(20 - delay)
+	timerNextParasite:Start(-delay)
 end
 
 function mod:OnCombatEnd()
@@ -107,115 +143,97 @@ end
 
 function mod:SPELL_AURA_APPLIED(args)
 	local spellId = args.spellId
-	if spellId == 41917 or spellId == 41914 then
+	if spellId == 376251 then
 		timerParasite:Start(args.destName)
 		if args:IsPlayer() then
 			specWarnParasite:Show()
 			specWarnParasite:Play("targetyou")
 			yellParasiteFades:Countdown(spellId)
+			if self.Options.RangeFrame then
+				DBM.RangeCheck:Show(30)
+			end
 		else
 			warnParasite:Show(args.destName)
 		end
 		if self.Options.ParasiteIcon then
 			self:SetIcon(args.destName, 8)
 		end
-	elseif spellId == 40585 then
-		timerBarrage:Start(args.destName)
-		timerNextBarrage:Start()
-		if args:IsPlayer() then
-			specWarnBarrage:Show()
-			specWarnBarrage:Play("runout")
-			specWarnBarrage:ScheduleVoice(1, "keepmove")
-		else
-			warnBarrage:Show(args.destName)
+	elseif spellId == 376244 then
+		self.vb.shearStacks = 1
+	elseif spellId == 376285 then
+		self.vb.inDemonForm = true
+		warnDemon:Show()
+		timerDemonForm:Start()
+		timerNextCleave:Cancel()
+	end
+end
+
+function mod:SPELL_AURA_APPLIED_DOSE(args)
+	local spellId = args.spellId
+	if spellId == 376244 then
+		self.vb.shearStacks = args.amount or (self.vb.shearStacks + 1)
+		if self.vb.shearStacks >= 2 then
+			specWarnShear:Show(args.destName)
+			specWarnShear:Play("taunt")
 		end
-	elseif spellId == 40932 then
-		warnFlame:CombinedShow(0.3, args.destName)
-		--timerFlame:Start(args.destName)
-	elseif spellId == 41083 then
-		warnShadowDemon:CombinedShow(1, args.destName)
-	elseif spellId == 40683 then
-		warnEnrage:Show()
-		timerEnrage:Start()
-	elseif spellId == 40695 then
-		warnCaged:Show()
-		timerCaged:Start()
+	elseif spellId == 376248 then
+		self.vb.demonicFury = args.amount or (self.vb.demonicFury + 1)
 	end
 end
 
 function mod:SPELL_AURA_REMOVED(args)
 	local spellId = args.spellId
-	if spellId == 41917 or spellId == 41914 then
+	if spellId == 376251 then
 		timerParasite:Stop(args.destName)
 		if args:IsPlayer() then
 			yellParasiteFades:Cancel()
+			if self.Options.RangeFrame then
+				DBM.RangeCheck:Hide()
+			end
 		end
 		if self.Options.ParasiteIcon then
 			self:RemoveIcon(args.destName)
 		end
+	elseif spellId == 376244 then
+		self.vb.shearStacks = 0
+	elseif spellId == 376285 then
+		self.vb.inDemonForm = false
+		warnHuman:Show()
 	end
 end
 
 function mod:SPELL_CAST_START(args)
 	local spellId = args.spellId
-	if spellId == 40904 then
-		warnDrawSoul:Show()
-	elseif spellId == 41117 then
-		specWarnShadowDemon:Show()
-		specWarnShadowDemon:Play("killmob")
-	elseif spellId == 39849 then--Throw Glaive
-		self:SetStage(2)
-		self.vb.flamesDown = 0
-		self.vb.warned_preP2 = true
-		warnPhase2:Show()
-		timerNextBarrage:Start(85)
+	if spellId == 376243 then
+		timerNextCleave:Start()
+	elseif spellId == 376245 then
+		self.vb.flameCrashCount = self.vb.flameCrashCount + 1
+		if self.vb.flameCrashCount > 3 then
+			self.vb.flameCrashCount = 1
+		end
+		local nextCount = self.vb.flameCrashCount + 1
+		if nextCount > 3 then
+			nextCount = 1
+		end
+		timerNextFlameCrash:Start(nil, nextCount)
+	elseif spellId == 376249 then
+		timerNextDrawSoul:Start()
 	end
 end
 
 function mod:SPELL_CAST_SUCCESS(args)
-	local spellId = args.spellId
-	if spellId == 41126 then
-		warnFlameBurst:Show()
-		self.vb.flameBursts = self.vb.flameBursts + 1
-		if self.vb.flameBursts < 3 then
-			timerNextFlameBurst:Start()
-		end
-	elseif spellId == 40647 and self.vb.phase < 4 then
-		self:SetStage(4)
-		self.vb.warned_preP4 = true
-		self:Unschedule(humanForms)
-		timerParasite:Cancel()
-		--timerFlame:Cancel()
-		timerNextFlameBurst:Cancel()
-		timerShadowDemon:Cancel()
-		timerNextHuman:Cancel()
-		timerNextDemon:Cancel()
-		timerPhase4:Start()
-		warnPhase4:Schedule(30)
-		timerNextDemon:Start(92)--Verify timer with this trigger, I keep overkilling boss :\
+	if args.spellId == 376250 then
+		timerNextParasite:Start()
 	end
 end
-
-function mod:SPELL_DAMAGE(_, _, _, destGUID, _, _, spellId)
-	if spellId == 40841 and destGUID == UnitGUID("player") and self:AntiSpam(4, 5) then--Flame Crash
-		specWarnGTFO:Show()
-		specWarnGTFO:Play("runaway")
-	end
-end
-mod.SPELL_MISSED = mod.SPELL_DAMAGE
 
 function mod:UNIT_DIED(args)
 	local cid = self:GetCIDFromGUID(args.destGUID)
-	if cid == 22997 then
-		self.vb.flamesDown = self.vb.flamesDown + 1
-		if self.vb.flamesDown >= 2 then
+	if cid == CID_DARK_FLAME or cid == CID_CORRUPT_FLAME then
+		self.vb.addsKilled[cid] = true
+		if self.vb.addsKilled[CID_DARK_FLAME] and self.vb.addsKilled[CID_CORRUPT_FLAME] then
 			self:SetStage(3)
-			if self.Options.RangeFrame then
-				DBM.RangeCheck:Show(6)
-			end
-			timerNextBarrage:Cancel()
 			warnPhase3:Show()
-			timerNextDemon:Start(76)
 		end
 	end
 end
@@ -223,38 +241,28 @@ end
 function mod:CHAT_MSG_MONSTER_YELL(msg)
 	if msg == L.Pull or msg:find(L.Pull) then
 		timerCombatStart:Start()
-	elseif msg == L.Eyebeam or msg:find(L.Eyebeam) then
-		warnEyebeam:Show()
-	elseif msg == L.Demon or msg:find(L.Demon) then
-		self.vb.flameBursts = 0
-		warnDemon:Show()
-		timerNextHuman:Start()
-		timerNextFlameBurst:Start()
-		timerShadowDemon:Start()
-		self:Schedule(74, humanForms, self)
-	elseif (msg == L.Phase4 or msg:find(L.Phase4)) and self.vb.phase < 4 then
-		self:SetStage(4)
-		self.vb.warned_preP4 = true
-		self:Unschedule(humanForms)
-		timerParasite:Cancel()
-		--timerFlame:Cancel()
-		timerNextFlameBurst:Cancel()
-		timerShadowDemon:Cancel()
-		timerNextHuman:Cancel()
-		timerNextDemon:Cancel()
-		timerPhase4:Start()
-		warnPhase4:Schedule(30)
-		timerNextDemon:Start(92)--Verify timer with this trigger, I keep overkilling boss :\
 	end
 end
 
 function mod:UNIT_HEALTH(uId)
 	local cid = self:GetUnitCreatureId(uId)
-	if not self.vb.warned_preP2 and cid == 22917 and UnitHealth(uId) / UnitHealthMax(uId) <= 0.75 then
+	if not cid or cid ~= 22917 then return end
+	local pct = UnitHealth(uId) / UnitHealthMax(uId)
+
+	if not self.vb.warned_preP2 and pct <= 0.70 then
 		self.vb.warned_preP2 = true
 		warnPhase2Soon:Show()
-	elseif not self.vb.warned_preP4 and cid == 22917 and UnitHealth(uId) / UnitHealthMax(uId) <= 0.35 then
-		self.vb.warned_preP4 = true
-		warnPhase4Soon:Show()
+		local targets = getTopThreatTargets(5)
+		if #targets > 0 then
+			warnBombardment:Show(table.concat(targets, ", "))
+		end
+	end
+	if self.vb.phase < 2 and pct <= 0.67 then
+		self:SetStage(2)
+		warnPhase2:Show()
+		timerNextCleave:Cancel()
+		timerNextFlameCrash:Cancel()
+		timerNextDrawSoul:Cancel()
+		timerNextParasite:Cancel()
 	end
 end

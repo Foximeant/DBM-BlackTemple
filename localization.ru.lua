@@ -225,13 +225,15 @@ L:SetWarningLocalization({
 	WarnHuman      = "Обычная Фаза",
 	WarnHumanSoon  = "Обычная Фаза скоро",
 	WarnDemon      = "Демона Фаза",
-	WarnDemonSoon  = "Демона Фаза скоро"
+	WarnDemonSoon  = "Демона Фаза скоро",
+	WarnBombardment = "Обстрел скверны, вероятные цели: %s"
 })
 
 L:SetTimerLocalization({
 	TimerCombatStart = "Combat starts", --Translate
 	TimerNextHuman   = "Next Обычная Фаза", --Translate
-	TimerNextDemon   = "Next Демона Фаза" --Translate
+	TimerNextDemon   = "Next Демона Фаза", --Translate
+	FlameCrashCount  = "Падение пламени #%d"
 })
 
 L:SetOptionLocalization({
@@ -244,11 +246,11 @@ L:SetOptionLocalization({
 	TimerCombatStart = "Show time for start of combat",                --Translate
 	TimerNextHuman   = "Show time for Next Human Phase",               --Translate
 	TimerNextDemon   = "Show time for Demon Human Phase",              --Translate
-	RangeFrame       = "Show range frame (10 yards) in Phase 3 and 4"  --Translate
+	RangeFrame       = "Show range frame (30 yards) while carrying Паразитические исчадия"  --Translate
 })
 
 L:SetMiscLocalization({
-	Pull            = "Акама! Твое двуличие меня не удивляет. Мне давным-давно стоило уничтожить тебя и твоих уродливых собратьев.",
+	Pull            = "Акама. Я не удивлен твоей двуличностью. Давно нужно было убить тебя и твоих мерзких прихвостней.",
 	Eyebeam         = "Посмотри в глаза Предателя!",
 	Demon           = "Узрите мощь демона!",
 	Phase4          = "Это все, смертные? Это и есть вся ваша ярость?",
