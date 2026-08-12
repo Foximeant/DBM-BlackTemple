@@ -5,7 +5,7 @@ mod:SetRevision("20260713000000")
 mod:SetCreatureID(22949, 22950, 22951, 22952)
 
 mod:SetModelID(21416)
-mod:SetUsedIcons(1)
+mod:SetUsedIcons(8) -- Живая бомба реально ставит иконку 8 (self:SetIcon(name, 8) ниже)
 
 mod:RegisterCombat("combat")
 
@@ -33,7 +33,10 @@ mod:RegisterEventsInCombat(
 -- ===================== Предупреждения =====================
 local warnLivingBombYou	= mod:NewSpecialWarningYou(SPELL_LIVINGBOMB, nil, nil, nil, 1, 2)
 local warnLivingBombTarget	= mod:NewTargetNoFilterAnnounce(SPELL_LIVINGBOMB, 2, nil, nil, 3)
-local warnBlizzardYou		= mod:NewSpecialWarningYou(SPELL_BLIZZARD_DOT, nil, nil, nil, 1, 2)
+-- Буран: каст (SPELL_BLIZZARD) и тик урона по стоящим в луже (SPELL_BLIZZARD_DOT) - разные spellId,
+-- поэтому CD-таймер и warning регистрируются как разные опции, но с явными связанными именами/подписями,
+-- чтобы в настройках было видно, что это один и тот же "Буран" (см. timerBlizzard ниже и GroupSpells в конце файла)
+local warnBlizzardYou		= mod:NewSpecialWarningYou(SPELL_BLIZZARD_DOT, nil, "BlizzardWarn", nil, 1, 2)
 local warnFireTrailYou		= mod:NewSpecialWarningYou(SPELL_FIRETRAIL, nil, nil, nil, 1, 2)
 
 -- Личный таймер Живой бомбы: 6 сек баф, голосовой отсчёт последние 5 сек (5,4,3,2,1)
@@ -41,7 +44,7 @@ local timerLivingBombYou	= mod:NewBuffActiveTimer(6, SPELL_LIVINGBOMB, nil, nil,
 
 -- ===================== Таймеры (CD-бары) =====================
 local timerHammer		= mod:NewCDTimer(20, SPELL_HAMMER, nil, nil, nil, 5)
-local timerBlizzard		= mod:NewCDTimer(16.5, SPELL_BLIZZARD, nil, nil, nil, 4, nil, DBM_COMMON_L.DAMAGE_ICON)
+local timerBlizzard		= mod:NewCDTimer(16.5, SPELL_BLIZZARD, nil, nil, "BlizzardCD", 4, nil, DBM_COMMON_L.DAMAGE_ICON)
 local timerLivingBomb		= mod:NewCDTimer(15.7, SPELL_LIVINGBOMB, nil, nil, nil, 3, nil, DBM_COMMON_L.DAMAGE_ICON)
 local timerWeakenMagic		= mod:NewCDTimer(15.7, SPELL_WEAKENMAGIC, nil, nil, nil, 2)
 local timerRenew		= mod:NewCDTimer(6.1, SPELL_RENEW, nil, nil, nil, 1, nil, DBM_COMMON_L.HEALER_ICON)
@@ -52,9 +55,17 @@ local timerPrayer		= mod:NewCDTimer(16.5, SPELL_PRAYER, nil, nil, nil, 7, nil, D
 
 local berserkTimer		= mod:NewBerserkTimer(600) -- 10 минут
 
-mod:AddSetIconOption("LivingBombIcon", SPELL_LIVINGBOMB)
+mod:AddSetIconOption("LivingBombIcon", SPELL_LIVINGBOMB, true, true, {8})
 mod:AddInfoFrameOption(SPELL_POISON)
 mod:AddRangeFrameOption(10) -- радар дистанции 10 ярдов, авто-вкл на Живой бомбе
+
+-- Явные подписи для разделённых опций Бурана (см. warnBlizzardYou/timerBlizzard выше) —
+-- иначе автогенерация текста для них не сработает, т.к. передан явный optionName
+mod.localization.options["BlizzardWarn"] = "Буран — предупреждение (вы в зоне)"
+mod.localization.options["BlizzardCD"]   = "Буран — таймер отката"
+-- Сливаем группы двух разных spellId (каст + тик урона) в одну, чтобы при включённой
+-- у игрока настройке "группировать опции по спеллу" оба чекбокса Бурана были рядом
+mod:GroupSpells(SPELL_BLIZZARD, SPELL_BLIZZARD_DOT)
 
 local PoisonBuffName = DBM:GetSpellInfo(SPELL_POISON)
 

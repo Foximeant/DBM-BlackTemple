@@ -7,7 +7,7 @@ mod:SetCreatureID(22947)
 mod:RegisterCombat("combat")
 
 mod:RegisterEventsInCombat(
-	"SPELL_CAST_START 374619 374706 374699 374696",
+	"SPELL_CAST_START 374706 374699 374696",
 	"SPELL_AURA_APPLIED 374693 374707 374701 374690 374623",
 	"SPELL_AURA_APPLIED_DOSE 374690",
 	"SPELL_AURA_REMOVED 374619 374693 374707 374701 374623"
@@ -50,11 +50,16 @@ mod:AddSetIconOption("SetIconOnMistressWish", 374693, true, true, {8,7})
 local doomTargets = {}
 mod.vb.linkScheduled = false
 
-local warnDoom = mod:NewTargetNoFilterAnnounce(374711, 4)
-local specDoom = mod:NewSpecialWarningYou(374711, nil, nil, nil, 1, 2)
-local yellDoom = mod:NewYell(374711)
-local timerDoom = mod:NewCDTimer(40, 374711, nil, nil, nil, 3)
-mod:AddSetIconOption("SetIconOnDoomLink", 374711, true, true, {1,2,3})
+-- 374711 (периодический тик урона) убран отсюда — для варнингов/таймера нужен spellId
+-- самой ауры Doom Link (374707), иначе показывается неверное имя/иконка способности
+local warnDoom = mod:NewTargetNoFilterAnnounce(374707, 4)
+local specDoom = mod:NewSpecialWarningYou(374707, nil, nil, nil, 1, 2)
+local yellDoom = mod:NewYell(374707)
+local timerDoom = mod:NewCDTimer(40, 374707, nil, nil, nil, 3)
+mod:AddSetIconOption("SetIconOnDoomLink", 374707, true, true, {1,2,3})
+-- TODO: если по логу подтвердится, что парная аура 374708 вешается на второго
+-- игрока в связке — нужно добавить её в SPELL_AURA_APPLIED/SPELL_AURA_REMOVED
+-- и обрабатывать так же, как 374707, иначе имя второго игрока не попадёт в doomTargets
 
 ----------------------------------------------------
 -- DEATH GRIP
@@ -93,6 +98,10 @@ end
 
 local showWish, showDoom, showGrip
 
+local function hideRangeFrame()
+	DBM.RangeCheck:Hide()
+end
+
 local function resetPhaseState(self)
 	table.wipe(wishTargets)
 	table.wipe(doomTargets)
@@ -105,6 +114,13 @@ local function resetPhaseState(self)
 	self:Unschedule(showWish)
 	self:Unschedule(showDoom)
 	self:Unschedule(showGrip)
+	self:Unschedule(hideRangeFrame)
+
+	-- в фазе мобов босс не кастует Wish/Doom/Grip — останавливаем и сами бары,
+	-- а не только внутреннее состояние (иначе бары продолжают тикать вхолостую)
+	timerWish:Stop()
+	timerDoom:Stop()
+	timerGrip:Stop()
 end
 
 showWish = function()
@@ -149,7 +165,7 @@ end
 
 function mod:OnCombatEnd()
 	if DBM.InfoFrame then DBM.InfoFrame:Hide() end
-	self:HideRangeFrame()
+	DBM.RangeCheck:Hide()
 end
 
 ----------------------------------------------------
@@ -259,8 +275,11 @@ function mod:SPELL_AURA_APPLIED(args)
 			specDoom:Show("СБЕГИСЬ")
 			specDoom:Play("gathershare")
 			yellDoom:Yell()
-			self:ShowRangeFrame(8)
-			self:Schedule(6, self.HideRangeFrame)
+			if self.Options.RangeFrame then
+				DBM.RangeCheck:Show(8)
+				self:Unschedule(hideRangeFrame)
+				self:Schedule(6, hideRangeFrame)
+			end
 		end
 
 	------------------------------------------------
