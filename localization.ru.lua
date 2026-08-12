@@ -220,39 +220,23 @@ L:SetGeneralLocalization({
 })
 
 L:SetWarningLocalization({
-	WarnPhase2Soon = "Фаза 2 скоро",
-	WarnPhase4Soon = "Фаза 4 скоро",
 	WarnHuman      = "Обычная Фаза",
-	WarnHumanSoon  = "Обычная Фаза скоро",
-	WarnDemon      = "Демона Фаза",
-	WarnDemonSoon  = "Демона Фаза скоро",
-	WarnBombardment = "Обстрел скверны, вероятные цели: %s"
+	WarnBombardment = "Обстрел скверны, вероятные цели: %s",
+	SpecWarnPhase2 = "Фаза 2 началась!"
 })
 
 L:SetTimerLocalization({
-	TimerCombatStart = "Combat starts", --Translate
-	TimerNextHuman   = "Next Обычная Фаза", --Translate
-	TimerNextDemon   = "Next Демона Фаза", --Translate
-	FlameCrashCount  = "Падение пламени #%d"
+	FlameCrashCount  = "Падение пламени #%d",
+	ShearCount       = "Срез #%d"
 })
 
 L:SetOptionLocalization({
-	WarnPhase2Soon   = "Show pre-warning for Phase 2 transition (at ~75%)", --Translate
-	WarnPhase4Soon   = "Show pre-warning for Phase 4 transition (at ~35%)", --Translate
-	WarnHuman        = "Show warning for Human Phase",                 --Translate
-	WarnHumanSoon    = "Show pre-warning for Human Phase",             --Translate
-	WarnDemon        = "Show warning for Demon Phase",                 --Translate
-	WarnDemonSoon    = "Show pre-warning for Demon Phase",             --Translate
-	TimerCombatStart = "Show time for start of combat",                --Translate
-	TimerNextHuman   = "Show time for Next Human Phase",               --Translate
-	TimerNextDemon   = "Show time for Demon Human Phase",              --Translate
-	RangeFrame       = "Show range frame (30 yards) while carrying Паразитические исчадия"  --Translate
+	WarnHuman        = "Показывать предупреждение об окончании демон-формы",
+	WarnBombardment  = "Показывать вероятные цели обстрела скверны перед 2 фазой",
+	SpecWarnPhase2   = "Показывать спецпредупреждение о начале 2 фазы",
+	RangeFrame       = "Показывать радар (30 ярдов) пока висят Паразитические исчадия"
 })
 
 L:SetMiscLocalization({
-	Pull            = "Акама. Я не удивлен твоей двуличностью. Давно нужно было убить тебя и твоих мерзких прихвостней.",
-	Eyebeam         = "Посмотри в глаза Предателя!",
-	Demon           = "Узрите мощь демона!",
-	Phase4          = "Это все, смертные? Это и есть вся ваша ярость?",
-	ParasiteWhisper = "Shadowfiends on you!" --Translate
+	Pull            = "Акама. Я не удивлен твоей двуличностью. Давно нужно было убить тебя и твоих мерзких прихвостней."
 })
