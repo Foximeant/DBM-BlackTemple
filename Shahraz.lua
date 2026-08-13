@@ -12,81 +12,43 @@ mod:RegisterEventsInCombat(
 	"SPELL_AURA_APPLIED_DOSE 374690",
 	"SPELL_AURA_REMOVED 374619 374693 374707 374701 374623"
 )
--- 374706 = каст Doom Link, 374707 (+ парная 374708) = сама аура Doom Link, 374711 = периодический тик урона (НЕ аура!)
--- 374699 = каст Death Grip, 374701 (+ парная 374702) = сама аура Death Grip
--- 374623 = Нестерпимая боль на танке — её снятие означает, что фаза мобов уже началась
--- 374696 = каст Наказания (~4.2с), КД 40с считается от CAST_START (проверено по логу: интервал каст->каст стабилен ~40с,
---          при этом сама длительность каста гуляет сильнее — значит откат не привязан к завершению каста)
 
 mod:AddBoolOption("DebugMode", false)
 mod:AddInfoFrameOption(374690)
 mod:AddRangeFrameOption(8)
 
 local PassionBuff = DBM:GetSpellInfo(374690)
-local specWarnPassion = mod:NewSpecialWarningStack(374690, nil, 70, nil, nil, 1, 3) -- предупреждение о большом стаке Страсти
+local specWarnPassion = mod:NewSpecialWarningStack(374690, nil, 70, nil, nil, 1, 3)
 local specWarnPhaseMobs = mod:NewSpecialWarning("Фаза мобов!", nil, nil, nil, 1, 2)
-local timerBossPhase = mod:NewPhaseTimer(120, nil, "Фаза мобов", nil, nil, 3) -- полная длительность фазы босса; по логу вышло 125.5с, доверяем заявленным 120с
+local timerBossPhase = mod:NewPhaseTimer(120, nil, "Фаза мобов", nil, nil, 3)
 
-----------------------------------------------------
--- STATE
-----------------------------------------------------
-mod.vb.phase = 0
-
-----------------------------------------------------
--- WISH
-----------------------------------------------------
 local wishTargets = {}
-mod.vb.wishIcon = 8
-
 local warnWish = mod:NewTargetNoFilterAnnounce(374693, 4)
 local specWish = mod:NewSpecialWarningYou(374693, nil, nil, nil, 1, 2)
 local yellWish = mod:NewYell(374693)
 local timerWish = mod:NewCDTimer(40, 374693, nil, nil, nil, 3)
-mod:AddSetIconOption("SetIconOnMistressWish", 374693, true, true, {8,7})
 
-----------------------------------------------------
--- DOOM LINK
-----------------------------------------------------
 local doomTargets = {}
-mod.vb.linkScheduled = false
-
--- 374711 (периодический тик урона) убран отсюда — для варнингов/таймера нужен spellId
--- самой ауры Doom Link (374707), иначе показывается неверное имя/иконка способности
 local warnDoom = mod:NewTargetNoFilterAnnounce(374707, 4)
-local specDoom = mod:NewSpecialWarningYou(374707, nil, nil, nil, 1, 2)
+local specDoom = mod:NewSpecialWarning("СБЕГИСЬ", nil, nil, nil, 1, 2, nil, nil, 374707)
 local yellDoom = mod:NewYell(374707)
 local timerDoom = mod:NewCDTimer(40, 374707, nil, nil, nil, 3)
-mod:AddSetIconOption("SetIconOnDoomLink", 374707, true, true, {1,2,3})
--- TODO: если по логу подтвердится, что парная аура 374708 вешается на второго
--- игрока в связке — нужно добавить её в SPELL_AURA_APPLIED/SPELL_AURA_REMOVED
--- и обрабатывать так же, как 374707, иначе имя второго игрока не попадёт в doomTargets
 
-----------------------------------------------------
--- DEATH GRIP
-----------------------------------------------------
 local gripTargets = {}
-mod.vb.gripScheduled = false
-
 local warnGrip = mod:NewTargetNoFilterAnnounce(374701, 4)
-local specGrip = mod:NewSpecialWarningYou(374701, nil, nil, nil, 1, 2)
+local specGrip = mod:NewSpecialWarning("РАЗБЕГИСЬ", nil, nil, nil, 1, 2, nil, nil, 374701)
 local yellGrip = mod:NewYell(374701)
 local timerGrip = mod:NewCDTimer(40, 374701, nil, nil, nil, 3)
-mod:AddSetIconOption("SetIconOnDeathGrip", 374701, true, true, {4,5,6})
 
-----------------------------------------------------
--- PUNISHMENT (НАКАЗАНИЕ)
-----------------------------------------------------
 local specWarnPunishment = mod:NewSpecialWarning("Наказание!", nil, nil, nil, 1, 2)
-local timerPunishment     = mod:NewCDTimer(40, 374696, nil, nil, nil, 3)
+local timerPunishment = mod:NewCDTimer(40, 374696, "PunishmentCount", nil, nil, 3)
 
-----------------------------------------------------
--- НЕСТЕРПИМАЯ БОЛЬ
-----------------------------------------------------
 local specWarnPain = mod:NewSpecialWarningYou(374623, nil, nil, nil, 1, 2)
 
-----------------------------------------------------
--- HELPERS
-----------------------------------------------------
+mod:AddSetIconOption("SetIconOnMistressWish", 374693, true, true, {8,7})
+mod:AddSetIconOption("SetIconOnDoomLink", 374707, true, true, {1,2,3})
+mod:AddSetIconOption("SetIconOnDeathGrip", 374701, true, true, {4,5,6})
+
 local function classColorName(name)
 	local _, class = UnitClass(name)
 	local color = class and RAID_CLASS_COLORS[class]
@@ -96,11 +58,11 @@ local function classColorName(name)
 	return name
 end
 
-local showWish, showDoom, showGrip
-
 local function hideRangeFrame()
 	DBM.RangeCheck:Hide()
 end
+
+local showWish, showDoom, showGrip
 
 local function resetPhaseState(self)
 	table.wipe(wishTargets)
@@ -116,8 +78,6 @@ local function resetPhaseState(self)
 	self:Unschedule(showGrip)
 	self:Unschedule(hideRangeFrame)
 
-	-- в фазе мобов босс не кастует Wish/Doom/Grip — останавливаем и сами бары,
-	-- а не только внутреннее состояние (иначе бары продолжают тикать вхолостую)
 	timerWish:Stop()
 	timerDoom:Stop()
 	timerGrip:Stop()
@@ -150,11 +110,15 @@ showGrip = function()
 	end
 end
 
-----------------------------------------------------
--- START / END
-----------------------------------------------------
+mod.vb.phase = 0
+mod.vb.punishmentCount = 0
+mod.vb.wishIcon = 8
+mod.vb.linkScheduled = false
+mod.vb.gripScheduled = false
+
 function mod:OnCombatStart()
 	self.vb.phase = 0
+	self.vb.punishmentCount = 0
 	resetPhaseState(self)
 
 	if self.Options.InfoFrame and DBM.InfoFrame then
@@ -168,65 +132,7 @@ function mod:OnCombatEnd()
 	DBM.RangeCheck:Hide()
 end
 
-----------------------------------------------------
--- CAST START
-----------------------------------------------------
-function mod:SPELL_CAST_START(args)
-	if args.spellId == 374706 then -- Doom Link
-		table.wipe(doomTargets)
-		timerDoom:Start(40)
-		self.vb.linkScheduled = true
-		self:Unschedule(showDoom)
-		self:Schedule(1.6, showDoom) -- аура приходит ~1.05-1.1с после каста, буфер с запасом
-
-	elseif args.spellId == 374699 then -- Death Grip
-		table.wipe(gripTargets)
-		timerGrip:Start(40)
-		self.vb.gripScheduled = true
-		self:Unschedule(showGrip)
-		self:Schedule(1.6, showGrip)
-
-	elseif args.spellId == 374696 then -- Наказание — КД считается от начала каста (проверено по логу)
-		timerPunishment:Start(40)
-		specWarnPunishment:Show()
-	end
-end
-
-----------------------------------------------------
--- AURA REMOVED
-----------------------------------------------------
-function mod:SPELL_AURA_REMOVED(args)
-	if args.spellId == 374619 then
-		self.vb.phase = 2
-		resetPhaseState(self)
-		timerWish:Start(17)
-		timerDoom:Start(37)
-		timerGrip:Start(12)
-		timerPunishment:Start(21)
-		timerBossPhase:Start()
-
-	elseif args.spellId == 374623 then -- Нестерпимая боль спала с танка -> фаза мобов уже началась
-		self.vb.phase = 1
-		resetPhaseState(self) -- останавливаем Wish/Doom/Grip — в фазе мобов босс их не кастует
-		timerBossPhase:Stop()
-		specWarnPhaseMobs:Show()
-
-	elseif args.spellId == 374693 and self.Options.SetIconOnMistressWish then
-		self:RemoveIcon(args.destName)
-	elseif args.spellId == 374707 and self.Options.SetIconOnDoomLink then
-		self:RemoveIcon(args.destName)
-	elseif args.spellId == 374701 and self.Options.SetIconOnDeathGrip then
-		self:RemoveIcon(args.destName)
-	end
-end
-
-----------------------------------------------------
--- AURA APPLIED
-----------------------------------------------------
 function mod:SPELL_AURA_APPLIED(args)
-	------------------------------------------------
-	-- WISH
-	------------------------------------------------
 	if args.spellId == 374693 then
 		if #wishTargets == 0 then
 			timerWish:Start(35)
@@ -252,12 +158,8 @@ function mod:SPELL_AURA_APPLIED(args)
 			self:Schedule(0.3, showWish)
 		end
 
-	------------------------------------------------
-	-- DOOM LINK
-	------------------------------------------------
 	elseif args.spellId == 374707 then
 		if not self.vb.linkScheduled then
-			-- fallback на случай, если SPELL_CAST_START (374706) не долетел
 			table.wipe(doomTargets)
 			timerDoom:Start(40)
 			self.vb.linkScheduled = true
@@ -272,7 +174,7 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 
 		if UnitIsUnit(args.destName, "player") then
-			specDoom:Show("СБЕГИСЬ")
+			specDoom:Show()
 			specDoom:Play("gathershare")
 			yellDoom:Yell()
 			if self.Options.RangeFrame then
@@ -282,12 +184,8 @@ function mod:SPELL_AURA_APPLIED(args)
 			end
 		end
 
-	------------------------------------------------
-	-- DEATH GRIP
-	------------------------------------------------
 	elseif args.spellId == 374701 then
 		if not self.vb.gripScheduled then
-			-- fallback на случай, если SPELL_CAST_START (374699) не долетел
 			table.wipe(gripTargets)
 			timerGrip:Start(40)
 			self.vb.gripScheduled = true
@@ -302,14 +200,11 @@ function mod:SPELL_AURA_APPLIED(args)
 		end
 
 		if UnitIsUnit(args.destName, "player") then
-			specGrip:Show("РАЗБЕГИСЬ")
+			specGrip:Show()
 			specGrip:Play("gathershare")
 			yellGrip:Yell()
 		end
 
-	------------------------------------------------
-	-- PASSION (СТРАСТЬ) — большой стак
-	------------------------------------------------
 	elseif args.spellId == 374690 then
 		if args:IsPlayer() then
 			if ((args.amount or 1) >= 70) and self:AntiSpam(5, 3) then
@@ -317,9 +212,6 @@ function mod:SPELL_AURA_APPLIED(args)
 			end
 		end
 
-	------------------------------------------------
-	-- НЕСТЕРПИМАЯ БОЛЬ
-	------------------------------------------------
 	elseif args.spellId == 374623 then
 		if UnitIsUnit(args.destName, "player") then
 			specWarnPain:Show()
@@ -328,3 +220,57 @@ function mod:SPELL_AURA_APPLIED(args)
 end
 
 mod.SPELL_AURA_APPLIED_DOSE = mod.SPELL_AURA_APPLIED
+
+function mod:SPELL_AURA_REMOVED(args)
+	if args.spellId == 374619 then
+		self.vb.phase = 2
+		resetPhaseState(self)
+		timerWish:Start(17)
+		timerDoom:Start(37)
+		timerGrip:Start(12)
+		timerPunishment:Start(21)
+		timerBossPhase:Start()
+
+	elseif args.spellId == 374623 then
+		self.vb.phase = 1
+		resetPhaseState(self)
+		timerBossPhase:Stop()
+		specWarnPhaseMobs:Show()
+
+	elseif args.spellId == 374693 and self.Options.SetIconOnMistressWish then
+		self:RemoveIcon(args.destName)
+	elseif args.spellId == 374707 and self.Options.SetIconOnDoomLink then
+		self:RemoveIcon(args.destName)
+	elseif args.spellId == 374701 and self.Options.SetIconOnDeathGrip then
+		self:RemoveIcon(args.destName)
+	end
+end
+
+function mod:SPELL_CAST_START(args)
+	if args.spellId == 374706 then
+		table.wipe(doomTargets)
+		timerDoom:Start(40)
+		self.vb.linkScheduled = true
+		self:Unschedule(showDoom)
+		self:Schedule(1.6, showDoom)
+
+	elseif args.spellId == 374699 then
+		table.wipe(gripTargets)
+		timerGrip:Start(40)
+		self.vb.gripScheduled = true
+		self:Unschedule(showGrip)
+		self:Schedule(1.6, showGrip)
+
+	elseif args.spellId == 374696 then
+		self.vb.punishmentCount = self.vb.punishmentCount + 1
+		if self.vb.punishmentCount > 3 then
+			self.vb.punishmentCount = 1
+		end
+		local nextCount = self.vb.punishmentCount + 1
+		if nextCount > 3 then
+			nextCount = 1
+		end
+		timerPunishment:Start(40, nextCount)
+		specWarnPunishment:Show()
+	end
+end
