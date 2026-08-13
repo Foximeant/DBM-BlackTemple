@@ -26,7 +26,7 @@ mod:RegisterEventsInCombat(
 	"SPELL_CAST_START " .. SPELL_PRAYER .. " " .. SPELL_FANOFKNIVES,
 	"SPELL_AURA_APPLIED " .. SPELL_LIVINGBOMB .. " " .. SPELL_BLIZZARD_DOT,
 	"SPELL_AURA_REMOVED " .. SPELL_LIVINGBOMB,
-	"SPELL_PERIODIC_DAMAGE " .. SPELL_BLIZZARD_DOT,
+	"SPELL_PERIODIC_DAMAGE " .. SPELL_BLIZZARD_DOT .. " " .. SPELL_FIRETRAIL,
 	"SPELL_DAMAGE " .. SPELL_FIRETRAIL
 )
 
@@ -155,16 +155,24 @@ function mod:SPELL_AURA_REMOVED(args)
 	end
 end
 
+local function fireTrailHit(self, args)
+	if args:IsPlayer() and self:AntiSpam(3, 2) then
+		warnFireTrailYou:Show()
+		warnFireTrailYou:Play("runaway")
+	end
+end
+
 function mod:SPELL_PERIODIC_DAMAGE(args)
 	if args.spellId == SPELL_BLIZZARD_DOT and args:IsPlayer() and self:AntiSpam(3, 1) then
 		warnBlizzardYou:Show()
 		warnBlizzardYou:Play("runaway")
+	elseif args.spellId == SPELL_FIRETRAIL then
+		fireTrailHit(self, args)
 	end
 end
 
 function mod:SPELL_DAMAGE(args)
-	if args.spellId == SPELL_FIRETRAIL and args:IsPlayer() and self:AntiSpam(3, 2) then
-		warnFireTrailYou:Show()
-		warnFireTrailYou:Play("runaway")
+	if args.spellId == SPELL_FIRETRAIL then
+		fireTrailHit(self, args)
 	end
 end
