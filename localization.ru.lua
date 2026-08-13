@@ -175,6 +175,13 @@ L:SetGeneralLocalization({
 	name = "Матушка Шахраз"
 })
 
+L:SetWarningLocalization({
+	["Фаза мобов!"] = "Фаза мобов!",
+	["Наказание!"]  = "Наказание!",
+	["СБЕГИСЬ"]     = "СБЕГИСЬ",
+	["РАЗБЕГИСЬ"]   = "РАЗБЕГИСЬ"
+})
+
 ----------------------
 --  Illidari Council  --
 ----------------------
@@ -222,7 +229,8 @@ L:SetGeneralLocalization({
 L:SetWarningLocalization({
 	WarnHuman      = "Обычная Фаза",
 	WarnBombardment = "Обстрел скверны, вероятные цели: %s",
-	SpecWarnPhase2 = "Фаза 2 началась!"
+	SpecWarnPhase2 = "Фаза 2 началась!",
+	SpecWarnPierce = "Скоро взгляд!" --TODO: уточнить формулировку
 })
 
 L:SetTimerLocalization({
