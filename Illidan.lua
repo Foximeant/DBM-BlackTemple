@@ -6,7 +6,7 @@ mod:SetRevision("20260729000000")
 mod:SetCreatureID(22917)
 
 mod:SetModelID(21135)
-mod:SetUsedIcons(4)
+mod:SetUsedIcons(8)
 
 mod:RegisterCombat("combat")
 
@@ -21,7 +21,7 @@ mod:RegisterEventsInCombat(
 	"SPELL_CAST_START 376243 376245 376249",
 	"SPELL_CAST_SUCCESS 376250",
 	"SPELL_DAMAGE 376262",
-	"UNIT_HEALTH"
+	"UNIT_HEALTH boss1"
 )
 
 local warnParasite		= mod:NewTargetAnnounce(376251, 3)
@@ -57,8 +57,16 @@ local berserkTimer		= mod:NewBerserkTimer(720)
 
 mod:AddSetIconOption("ParasiteIcon", 376251)
 mod:AddRangeFrameOption(30, 376251)
+mod:AddBoolOption("SpacingRadar", true, "misc")
 mod:GroupSpells(376251, 376250)
 mod:GroupSpells(376244, 376243)
+
+-- Radar spacing distance per phase (independent mechanic from parasite carrier range check)
+local spacingRangeByPhase = {
+	[1] = 7,
+	[2] = 8,
+	[3] = 8,
+}
 
 local function getRaidUnits()
 	local units = {}
@@ -123,6 +131,20 @@ mod.vb.flameCrashCount = 0
 mod.vb.corruptionStacks = 0
 mod.vb.warned_preP2 = false
 mod.vb.inDemonForm = false
+mod.vb.parasiteCarrier = false
+
+-- Single shared DBM.RangeCheck frame: parasite carrier range (30yd) takes priority while active,
+-- otherwise fall back to the phase-based spacing radar. Never Hide() unconditionally mid-combat
+-- or it will kill whichever of the two is currently relying on the frame.
+function mod:UpdateRangeDisplay()
+	if self.vb.parasiteCarrier and self.Options.RangeFrame then
+		DBM.RangeCheck:Show(30)
+	elseif self.Options.SpacingRadar and self.vb.phase and self.vb.phase >= 1 then
+		DBM.RangeCheck:Show(spacingRangeByPhase[self.vb.phase] or 8)
+	else
+		DBM.RangeCheck:Hide()
+	end
+end
 
 function mod:OnCombatStart(delay)
 	self:SetStage(1)
@@ -133,16 +155,16 @@ function mod:OnCombatStart(delay)
 	self.vb.corruptionStacks = 0
 	self.vb.warned_preP2 = false
 	self.vb.inDemonForm = false
+	self.vb.parasiteCarrier = false
 	berserkTimer:Start(-delay)
 	timerNextDrawSoul:Start(20 - delay)
 	timerNextParasite:Start(-delay)
+	self:UpdateRangeDisplay()
 end
 
 function mod:OnCombatEnd()
 	self:UnregisterShortTermEvents()
-	if self.Options.RangeFrame then
-		DBM.RangeCheck:Hide()
-	end
+	DBM.RangeCheck:Hide()
 end
 
 function mod:SPELL_AURA_APPLIED(args)
@@ -153,9 +175,8 @@ function mod:SPELL_AURA_APPLIED(args)
 			specWarnParasite:Show()
 			specWarnParasite:Play("targetyou")
 			yellParasiteFades:Countdown(spellId)
-			if self.Options.RangeFrame then
-				DBM.RangeCheck:Show(30)
-			end
+			self.vb.parasiteCarrier = true
+			self:UpdateRangeDisplay()
 		else
 			warnParasite:Show(args.destName)
 		end
@@ -209,9 +230,8 @@ function mod:SPELL_AURA_REMOVED(args)
 		timerParasite:Stop(args.destName)
 		if args:IsPlayer() then
 			yellParasiteFades:Cancel()
-			if self.Options.RangeFrame then
-				DBM.RangeCheck:Hide()
-			end
+			self.vb.parasiteCarrier = false
+			self:UpdateRangeDisplay()
 		end
 		if self.Options.ParasiteIcon then
 			self:RemoveIcon(args.destName)
@@ -294,6 +314,7 @@ function mod:UNIT_HEALTH(uId)
 		timerNextFlameCrash:Cancel()
 		timerNextDrawSoul:Cancel()
 		timerNextParasite:Cancel()
+		self:UpdateRangeDisplay()
 		self:Schedule(5, function()
 			local targets = getTopThreatTargets(5)
 			if #targets > 0 then
@@ -308,5 +329,6 @@ function mod:UNIT_HEALTH(uId)
 		timerNextFlameCrash:Start()
 		timerNextDrawSoul:Start()
 		timerNextParasite:Start(60)
+		self:UpdateRangeDisplay()
 	end
 end
