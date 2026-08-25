@@ -229,7 +229,6 @@ L:SetGeneralLocalization({
 L:SetWarningLocalization({
 	WarnHuman      = "Обычная Фаза",
 	WarnBombardment = "Обстрел скверны, вероятные цели: %s",
-	SpecWarnPhase2 = "Фаза 2 началась!",
 	SpecWarnPierce = "Скоро взгляд!" --TODO: уточнить формулировку
 })
 
@@ -241,7 +240,6 @@ L:SetTimerLocalization({
 L:SetOptionLocalization({
 	WarnHuman        = "Показывать предупреждение об окончании демон-формы",
 	WarnBombardment  = "Показывать вероятные цели обстрела скверны перед 2 фазой",
-	SpecWarnPhase2   = "Показывать спецпредупреждение о начале 2 фазы",
 	SpecWarnPierce   = "Показывать спецпредупреждение о приближении взгляда",
 	RangeFrame       = "Показывать радар (30 ярдов) пока висят Паразитические исчадия",
 	SpacingRadar     = "Показывать радар для соблюдения дистанции (7/8/8 ярдов по фазам)"
