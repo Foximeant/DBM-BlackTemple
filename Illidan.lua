@@ -68,6 +68,15 @@ local spacingRangeByPhase = {
 	[3] = 8,
 }
 
+-- Phase 3 alternating Human/Demon form timings. From the first Demon Form transition onward,
+-- both Draw Soul and Parasite predictions use fixed offsets from the start of each 75s form
+-- instead of the flat generic CD, since the boss script casts them on a script-timed schedule
+-- rather than an actual repeating cooldown. Everything after the first predicted cast in each
+-- form is then corrected by the normal SPELL_CAST_START/SPELL_CAST_SUCCESS handlers as usual.
+local P3_DRAWSOUL_OFFSET = 28          -- first Draw Soul after any Phase 3 form transition (both Demon and Human)
+local P3_DEMONFORM_PARASITE_OFFSET = 39 -- first Parasite after entering Demon Form
+local P3_HUMANFORM_PARASITE_OFFSET = 68 -- first Parasite after entering a (subsequent) Human Form
+
 local function getRaidUnits()
 	local units = {}
 	if IsInRaid() then
@@ -201,8 +210,19 @@ function mod:SPELL_AURA_APPLIED(args)
 		timerDemonForm:Start()
 		timerNextCleave:Cancel()
 		timerNextFlameCrash:Start()
-		timerNextDrawSoul:Start()
-		timerNextParasite:Start(45)
+		self:Schedule(2, function()
+			local targets = getTopThreatTargets(5)
+			if #targets > 0 then
+				warnBombardment:Show(table.concat(targets, ", "))
+			end
+		end)
+		if self.vb.phase == 3 then
+			timerNextDrawSoul:Start(P3_DRAWSOUL_OFFSET)
+			timerNextParasite:Start(P3_DEMONFORM_PARASITE_OFFSET)
+		else
+			timerNextDrawSoul:Start()
+			timerNextParasite:Start(45)
+		end
 	end
 end
 
@@ -246,8 +266,13 @@ function mod:SPELL_AURA_REMOVED(args)
 		self.vb.inDemonForm = false
 		warnHuman:Show()
 		timerNextFlameCrash:Start()
-		timerNextDrawSoul:Start()
-		timerNextParasite:Start(60)
+		if self.vb.phase == 3 then
+			timerNextDrawSoul:Start(P3_DRAWSOUL_OFFSET)
+			timerNextParasite:Start(P3_HUMANFORM_PARASITE_OFFSET)
+		else
+			timerNextDrawSoul:Start()
+			timerNextParasite:Start(60)
+		end
 	end
 end
 
@@ -306,7 +331,7 @@ function mod:UNIT_HEALTH(uId)
 		self.vb.warned_preP2 = true
 		warnPhase2Soon:Show()
 	end
-	if self.vb.phase < 2 and pct <= 0.68 then
+	if self.vb.phase < 2 and pct <= 0.67 then
 		self:SetStage(2)
 		warnPhase2:Show()
 		specWarnPhase2:Show()
@@ -322,7 +347,7 @@ function mod:UNIT_HEALTH(uId)
 			end
 		end)
 	end
-	if self.vb.phase < 3 and pct <= 0.67 then
+	if self.vb.phase < 3 and pct <= 0.66 then
 		self:SetStage(3)
 		warnPhase3:Show()
 		timerNextCleave:Start()
